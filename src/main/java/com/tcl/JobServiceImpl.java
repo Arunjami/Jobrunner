@@ -41,11 +41,14 @@ public class JobServiceImpl implements JobService{
         return targetFile.getName()+"is saved";
     }
 
+    @Value("${attachment.storage.filesystem.location}")
+    private String attachmentLocation;
+
     private File StoreFileInLocal(MultipartFile file) throws IOException
     {
         File targetFile = new File(System.getProperty("java.io.tmpdir")+"/sample.xlsx");
         file.transferTo(targetFile);
-        File dest = new File("/var/log/"+getRandomName()+".xlsx");
+        File dest = new File(attachmentLocation+getRandomName()+".xlsx");
         try {
             FileUtils.copyFile(targetFile, dest);
         } catch (IOException e) {
@@ -56,10 +59,13 @@ public class JobServiceImpl implements JobService{
 
     }
 
+    @Value("${job.root.path}")
+    private String jobPath;
+
     private String kettleJobRunner( File targetFile )
     {
         try{
-            String jobFile ="/var/itsm/jobs/assetupload" + "/Dynamic parsing of Excel File.kjb";
+            String jobFile =jobPath+ "/Dynamic parsing of Excel File.kjb";
             Repository repository = null;
             KettleEnvironment.init();
             JobMeta jobmeta = new JobMeta(jobFile, repository);
