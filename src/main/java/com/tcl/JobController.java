@@ -76,4 +76,12 @@ public class JobController{
       return  jobService.performJobExecution(file);
     }
 
+    @RequestMapping(value = "/save", method = RequestMethod.POST)
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public String saveFileInLocal(@RequestParam("file") MultipartFile file) throws Exception {
+
+        return  jobService.saveFileInLocalStorage(file);
+    }
+
 }

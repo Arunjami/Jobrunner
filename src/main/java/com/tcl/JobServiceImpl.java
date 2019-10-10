@@ -29,7 +29,20 @@ public class JobServiceImpl implements JobService{
     private static Logger logger = LoggerFactory.getLogger(JobController.class);
 
     @Override
-    public String performJobExecution(MultipartFile file) throws IOException {
+    public String performJobExecution(MultipartFile file) throws IOException  {
+                File targetFile = StoreFileInLocal(file);
+                return kettleJobRunner(targetFile );
+    }
+
+    @Override
+    public String saveFileInLocalStorage(MultipartFile file) throws IOException{
+        File targetFile = StoreFileInLocal(file);
+
+        return targetFile.getName()+"is saved";
+    }
+
+    private File StoreFileInLocal(MultipartFile file) throws IOException
+    {
         File targetFile = new File(System.getProperty("java.io.tmpdir")+"/sample.xlsx");
         file.transferTo(targetFile);
         File dest = new File("/var/log/"+getRandomName()+".xlsx");
@@ -39,57 +52,53 @@ public class JobServiceImpl implements JobService{
             logger.error("Cannot process");
             throw new CouldNotProcessException("Could not copy the files", e.getMessage(), e);
         }
+        return targetFile;
 
+    }
+
+    private String kettleJobRunner( File targetFile )
+    {
         try{
             String jobFile ="/var/itsm/jobs/assetupload" + "/Dynamic parsing of Excel File.kjb";
             Repository repository = null;
-            try{
-                KettleEnvironment.init();
-                JobMeta jobmeta = new JobMeta(jobFile, repository);
-                Job job = new Job(repository, jobmeta);
-                job.setLogLevel(LogLevel.DEBUG);
+            KettleEnvironment.init();
+            JobMeta jobmeta = new JobMeta(jobFile, repository);
+            Job job = new Job(repository, jobmeta);
+            job.setLogLevel(LogLevel.DEBUG);
 
-                job.shareVariablesWith(jobmeta);
-                jobmeta.setParameterValue("EXCEL_PATH", targetFile.getAbsolutePath());
-                jobmeta.setParameterValue("TASK_ID", "58851");
-                jobmeta.setParameterValue("USER_ID", "arunmani");
+            job.shareVariablesWith(jobmeta);
+            jobmeta.setParameterValue("EXCEL_PATH", targetFile.getAbsolutePath());
+            jobmeta.setParameterValue("TASK_ID", "58851");
+            jobmeta.setParameterValue("USER_ID", "arunmani");
 
-                jobmeta.setInternalKettleVariables(job);
-                jobmeta.activateParameters();
+            jobmeta.setInternalKettleVariables(job);
+            jobmeta.activateParameters();
 
-                job.start();
-                job.waitUntilFinished();
+            job.start();
+            job.waitUntilFinished();
 
-                if (job.getErrors() > 0) {
-                    logger.error("--------------Error Executing Job------------------");
-                    return "Error while processing data";
-                }
-
-                job.setFinished(true);
-                jobmeta.eraseParameters();
-                job.eraseParameters();
-                if (targetFile.delete()) {
-                    logger.info("Deleted the temp file [{}] created for asset upload");
-                }
-
-                return "Job Success";
+            if (job.getErrors() > 0) {
+                logger.error("--------------Error Executing Job------------------");
+                return "Error while processing data";
             }
-            catch (KettleException e) {
-                /* TODO Auto-generated catch block */
 
-                logger.error(e.getMessage(), e);
-                e.printStackTrace();
+            job.setFinished(true);
+            jobmeta.eraseParameters();
+            job.eraseParameters();
+            if (targetFile.delete()) {
+                logger.info("Deleted the temp file [{}] created for asset upload");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+
+            return "Job Success";
+        }
+        catch (KettleException e) {
+            /* TODO Auto-generated catch block */
 
             logger.error(e.getMessage(), e);
-
-            throw new CouldNotProcessException("Could not run bul update job", e.getMessage(), e);
+            e.printStackTrace();
         }
 
-
-        return "Job Success";
+        return  "Job Sucess";
     }
 
     final String lexicon = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12345674890";
